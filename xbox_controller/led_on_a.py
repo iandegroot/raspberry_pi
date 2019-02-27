@@ -1,5 +1,6 @@
 import RPi.GPIO as GPIO
 from time import sleep
+import xbox
 
 LED = 14
 
@@ -8,12 +9,14 @@ GPIO.setwarnings(False)
 
 GPIO.setup(LED, GPIO.OUT)
 
+joy = xbox.Joystick()
+
 try:
-    while True:
-        GPIO.output(LED, GPIO.HIGH)
-        sleep(1)
-        GPIO.output(LED, GPIO.LOW)
-        sleep(1)
+    while not joy.Back():
+        if joy.A():
+            GPIO.output(LED, GPIO.HIGH)
+        else:
+            GPIO.output(LED, GPIO.LOW)
 
 except KeyboardInterrupt:
     print("\nCleaning up...")
