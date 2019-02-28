@@ -57,34 +57,53 @@ pwm_scaling_factor = 100
 motor_low_threshold = 25
 
 backward_speed = 50
+motor_off = 0
+
+direction = FORWARD
 try:
     set_right_side_to_forward()
     set_left_side_to_forward()
 
     while True:
-        scaled_trigger_reading = joy.rightTrigger() * pwm_scaling_factor
-        if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
-            scaled_trigger_reading = motor_low_threshold
-        right_pwm.ChangeDutyCycle(scaled_trigger_reading)
+        if direction == FORWARD:
+            set_right_side_to_forward()
+            set_left_side_to_forward()
 
-        scaled_trigger_reading = joy.leftTrigger() * pwm_scaling_factor
-        if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
-            scaled_trigger_reading = motor_low_threshold
-        left_pwm.ChangeDutyCycle(scaled_trigger_reading)
+            scaled_trigger_reading = joy.rightTrigger() * pwm_scaling_factor
+            if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
+                scaled_trigger_reading = motor_low_threshold
+            right_pwm.ChangeDutyCycle(scaled_trigger_reading)
+
+            scaled_trigger_reading = joy.leftTrigger() * pwm_scaling_factor
+            if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
+                scaled_trigger_reading = motor_low_threshold
+            left_pwm.ChangeDutyCycle(scaled_trigger_reading)
+
+            if joy.rightBumper() or joy.leftBumper():
+                direction = BACKWARD
+
+        elif direction == BACKWARD:
+            if joy.rightBumper():
+                set_right_side_to_backward()
+                right_pwm.ChangeDutyCycle(backward_speed)
+            else:
+                right_pwm.ChangeDutyCycle(motor_off)
+
+            if joy.leftBumper():
+                set_left_side_to_backward()
+                left_pwm.ChangeDutyCycle(backward_speed)
+            else:
+                left_pwm.ChangeDutyCycle(motor_off)
+
+            if joy.rightTrigger() or joy.leftTrigger():
+                direction = FORWARD
 
         if joy.Y():
             GPIO.output(YELLOW_LED, GPIO.HIGH)
         else:
             GPIO.output(YELLOW_LED, GPIO.LOW)
-        """
-        if joy.rightBumper():
-            set_right_side_to_backward()
-            right_pwm.ChangeDutyCycle(backward_speed)
 
-        if joy.leftBumper():
-            set_left_side_to_backward()
-            left_pwm.ChangeDutyCycle(backward_speed)
-        """    
+
 
 except KeyboardInterrupt:
     print("\nCleaning up...")
