@@ -25,6 +25,38 @@ GPIO.setup(IN_4, GPIO.OUT)
 GPIO.setup(EN_B, GPIO.OUT)
 GPIO.setup(YELLOW_LED, GPIO.OUT)
 
+class Motor:
+
+    pwm_scaling_factor = 100
+    motor_low_threshold = 25
+    motor_off = 0
+
+    __init__(self, pwm_pin, dir_pin_1, dir_pin_2):
+        self.direction = FORWARD
+        self.speed_value = motor_off
+        self.speed_pin = GPIO.PWM(pwm_pin, 100)
+        self.dir_pin_1 = dir_pin_1
+        self.dir_pin_2 = dir_pin_2
+
+        self.motor_speed_pin.start(self.speed_value)
+
+    def set_motor_to_forward(self):
+        GPIO.output(self.dir_pin_1, GPIO.HIGH)
+        GPIO.output(self.dir_pin_2, GPIO.LOW)
+
+    def set_motor_to_backward(self):
+        GPIO.output(self.dir_pin_1, GPIO.LOW)
+        GPIO.output(self.dir_pin_2, GPIO.HIGH)
+
+    def forward(self):
+        self.set_motor_to_forward()
+        scaled_trigger_reading = joy.rightTrigger() * pwm_scaling_factor
+        if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
+            scaled_trigger_reading = motor_low_threshold
+        right_pwm.ChangeDutyCycle(scaled_trigger_reading)
+
+    def backward(self):
+        pass
 
 left_pwm = GPIO.PWM(EN_A, 100)
 right_pwm = GPIO.PWM(EN_B, 100)
