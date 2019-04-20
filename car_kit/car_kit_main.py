@@ -19,7 +19,6 @@ YELLOW_LED = 14
 FORWARD = 1
 BACKWARD = 0
 
-
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
@@ -40,14 +39,14 @@ class Motor:
 
     def __init__(self, pwm_pin, dir_pin_1, dir_pin_2, get_trigger_func, get_bumper_func):
         self.direction = FORWARD
-        self.speed_value = motor_off
+        self.speed_value = self.motor_off
         self.speed_pin = GPIO.PWM(pwm_pin, 100)
         self.dir_pin_1 = dir_pin_1
         self.dir_pin_2 = dir_pin_2
         self.trigger_func = get_trigger_func
         self.bumper_func = get_bumper_func
 
-        self.motor_speed_pin.start(self.speed_value)
+        self.speed_pin.start(self.speed_value)
 
     def set_to_forward(self):
         GPIO.output(self.dir_pin_1, GPIO.HIGH)
@@ -59,89 +58,50 @@ class Motor:
 
     def move_forward(self):
         self.set_to_forward()
-        scaled_trigger_reading = self.trigger_func() * pwm_scaling_factor
-        if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
-            scaled_trigger_reading = motor_low_threshold
-        speed_pin.ChangeDutyCycle(scaled_trigger_reading)
+        scaled_trigger_reading = self.trigger_func() * self.pwm_scaling_factor
+        if scaled_trigger_reading > 0 and scaled_trigger_reading < self.motor_low_threshold:
+            scaled_trigger_reading = self.motor_low_threshold
+        self.speed_pin.ChangeDutyCycle(scaled_trigger_reading)
 
     def move_backward(self):
         if self.bumper_func():
             self.set_to_backward()
-            speed_pin.ChangeDutyCycle(backward_speed)
+            self.speed_pin.ChangeDutyCycle(self.backward_speed)
         else:
-            speed_pin.ChangeDutyCycle(motor_off)
-
-left_pwm = GPIO.PWM(EN_A, 100)
-right_pwm = GPIO.PWM(EN_B, 100)
-left_pwm.start(0)
-right_pwm.start(0)
-
-right_motor_dir = FORWARD
-left_motor_dir = FORWARD
-
-
-def set_right_side_to_forward():
-    GPIO.output(IN_3, GPIO.HIGH)
-    GPIO.output(IN_4, GPIO.LOW)
-
-def set_right_side_to_backward():
-    GPIO.output(IN_3, GPIO.LOW)
-    GPIO.output(IN_4, GPIO.HIGH)
-
-def set_left_side_to_forward():
-    GPIO.output(IN_1, GPIO.HIGH)
-    GPIO.output(IN_2, GPIO.LOW)
-
-def set_left_side_to_backward():
-    GPIO.output(IN_1, GPIO.LOW)
-    GPIO.output(IN_2, GPIO.HIGH)
+            self.speed_pin.ChangeDutyCycle(self.motor_off)
 
 joy = xbox.Joystick()
 
-pwm_scaling_factor = 100
-motor_low_threshold = 25
-
-backward_speed = 40
-motor_off = 0
-
-direction = FORWARD
 try:
-    set_right_side_to_forward()
-    set_left_side_to_forward()
+    left_motor = Motor(EN_A, IN_1, IN_2, joy.leftTrigger, joy.leftBumper)
+    right_motor = Motor(EN_B, IN_3, IN_4, joy.rightTrigger, joy.rightBumper)
 
     while True:
-        if direction == FORWARD:
-            set_right_side_to_forward()
-            set_left_side_to_forward()
-
-            scaled_trigger_reading = joy.rightTrigger() * pwm_scaling_factor
-            if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
-                scaled_trigger_reading = motor_low_threshold
-            right_pwm.ChangeDutyCycle(scaled_trigger_reading)
-
-            scaled_trigger_reading = joy.leftTrigger() * pwm_scaling_factor
-            if scaled_trigger_reading > 0 and scaled_trigger_reading < motor_low_threshold:
-                scaled_trigger_reading = motor_low_threshold
-            left_pwm.ChangeDutyCycle(scaled_trigger_reading)
-
-            if joy.rightBumper() or joy.leftBumper():
-                direction = BACKWARD
-
-        elif direction == BACKWARD:
-            if joy.rightBumper():
-                set_right_side_to_backward()
-                right_pwm.ChangeDutyCycle(backward_speed)
-            else:
-                right_pwm.ChangeDutyCycle(motor_off)
+        if left_motor.direction == FORWARD:
+            left_motor.set_to_forward()
+            left_motor.move_forward()
 
             if joy.leftBumper():
-                set_left_side_to_backward()
-                left_pwm.ChangeDutyCycle(backward_speed)
-            else:
-                left_pwm.ChangeDutyCycle(motor_off)
+                left_motor.direction = BACKWARD
 
-            if joy.rightTrigger() or joy.leftTrigger():
-                direction = FORWARD
+        elif left_motor.direction == BACKWARD:
+            left_motor.move_backward()
+
+            if joy.leftTrigger():
+                left_motor.direction = FORWARD
+
+        if right_motor.direction == FORWARD:
+            right_motor.set_to_forward()
+            right_motor.move_forward()
+
+            if joy.rightBumper():
+                right_motor.direction = BACKWARD
+
+        elif right_motor.direction == BACKWARD:
+            right_motor.move_backward()
+
+            if joy.rightTrigger():
+                right_motor.direction = FORWARD
 
         if joy.Y():
             GPIO.output(YELLOW_LED, GPIO.HIGH)
@@ -150,6 +110,6 @@ try:
 
 except KeyboardInterrupt:
     print("\nCleaning up...")
-    left_pwm.stop()
-    right_pwm.stop()
+    left_motor.speed_pin.stop()
+    right_motor.speed_pin.stop()
     GPIO.cleanup()
